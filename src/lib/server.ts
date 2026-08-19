@@ -374,6 +374,21 @@ export class ClientsController extends EventEmitter {
   }
 
   addSocket(socket: WebSocket) {
+    // Attach this first so that closing the socket below can never emit an
+    // unhandled error event.
+    socket.on("error", (error) => {
+      this.logger.error("Client socket error", error);
+    });
+
+    if (!this.driver.ready) {
+      // sendVersion() below reads driver.controller, which omits the home ID
+      // or throws while the controller is gone. start() gates on driver.ready
+      // too, but only once, at startup.
+      this.logger.info("Rejecting new client, driver is not ready");
+      socket.close(1013, "Driver is not ready");
+      return;
+    }
+
     this.logger.debug("New client");
     const client = new Client(
       socket,
@@ -382,9 +397,6 @@ export class ClientsController extends EventEmitter {
       this.logger,
       this.remoteController,
     );
-    socket.on("error", (error) => {
-      this.logger.error("Client socket error", error);
-    });
     socket.on("close", (code, reason) => {
       this.logger.info("Client disconnected");
       this.logger.debug(`Code ${code}: ${reason}`);

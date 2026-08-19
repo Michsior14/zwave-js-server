@@ -64,7 +64,7 @@ All these options can be combined.
 
 ## API
 
-When a client connects, the server will send the version.
+When a client connects, the server will send the version. While the driver is not ready, the server instead closes the connection with code `1013` (Try Again Later), and the client should retry.
 
 ```ts
 interface {
